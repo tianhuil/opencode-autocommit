@@ -366,7 +366,7 @@ export const AutoCommitPlugin: Plugin = async ({ client, $, directory, worktree 
         },
       })
       
-      const response = await client.session.messages({ sessionID })
+      const response = await client.session.messages({ path: { id: sessionID } })
       const messages = response.data ?? []
       
       const turn = getLastTurn(messages)
