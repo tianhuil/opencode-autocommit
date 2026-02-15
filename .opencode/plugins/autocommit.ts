@@ -1,6 +1,10 @@
 import type { Plugin } from "@opencode-ai/plugin"
+import type { OpencodeClient } from "@opencode-ai/sdk"
 import { tool, tool as toolSchema } from "@opencode-ai/plugin"
 import { z } from "zod"
+import * as fs from "fs/promises"
+import * as path from "path"
+import * as yaml from "yaml"
 
 const ZAutoCommitMode = z.enum(["disabled", "worktree", "enabled"])
 
@@ -19,18 +23,34 @@ interface LastTurn {
   assistantResponse: string
 }
 
-async function loadSettingsFromFile(directory: string): Promise<Partial<AutoCommitSettings> | null> {
+async function loadSettingsFromFile(directory: string, client: OpencodeClient): Promise<Partial<AutoCommitSettings> | null> {
   try {
-    const fs = await import("fs/promises")
-    const path = await import("path")
     const settingsPath = path.join(directory, ".opencode", "auto-commit.settings.yml")
     
     const content = await fs.readFile(settingsPath, "utf-8")
     
-    const yaml = await import("yaml")
     const parsed = yaml.parse(content)
-    return ZAutoCommitSettings.partial().parse(parsed)
+    const settings = ZAutoCommitSettings.partial().parse(parsed)
+    
+    await client.app.log({
+      body: {
+        service: "opencode-autocommit",
+        level: "info",
+        message: "Loaded settings from file",
+        extra: { settingsPath, settings },
+      },
+    })
+    
+    return settings
   } catch (error) {
+    await client.app.log({
+      body: {
+        service: "opencode-autocommit",
+        level: "error",
+        message: "Failed to load settings file",
+        extra: { error: error instanceof Error ? error.message : String(error) },
+      },
+    })
     return null
   }
 }
@@ -38,8 +58,17 @@ async function loadSettingsFromFile(directory: string): Promise<Partial<AutoComm
 async function generateCommitSummary(
   turn: LastTurn,
   settings: AutoCommitSettings,
-  client: any
+  client: OpencodeClient
 ): Promise<string> {
+  await client.app.log({
+    body: {
+      service: "opencode-autocommit",
+      level: "info",
+      message: "Generating commit summary",
+      extra: { commitModel: settings.commitModel },
+    },
+  })
+  
   const prompt = `Generate a one-line commit message (max 50 characters) for this turn.
 
 User prompt: ${turn.userPrompt}
@@ -48,18 +77,30 @@ LLM response: ${turn.assistantResponse}
 
 Return ONLY the commit message, nothing else.`
 
+  let response: any
   if (settings.commitModel) {
-    const response = await client.app.generate({
+    response = await client.app.generate({
       model: settings.commitModel,
       prompt,
     })
-    return response.text?.trim() || "Auto-commit"
+  } else {
+    response = await client.app.generate({
+      prompt,
+    })
   }
   
-  const response = await client.app.generate({
-    prompt,
+  const summary = response.text?.trim() || "Auto-commit"
+  
+  await client.app.log({
+    body: {
+      service: "opencode-autocommit",
+      level: "info",
+      message: "Commit summary generated",
+      extra: { summary },
+    },
   })
-  return response.text?.trim() || "Auto-commit"
+  
+  return summary
 }
 
 function truncateCommitMessage(
@@ -109,8 +150,9 @@ async function isWorktree($: any, directory: string): Promise<boolean> {
   try {
     const result = await $`git rev-parse --show-toplevel`.quiet()
     const gitRoot = result.stdout.toString().trim()
-    return gitRoot !== directory
-  } catch {
+    const isWorktree = gitRoot !== directory
+    return isWorktree
+  } catch (error) {
     return false
   }
 }
@@ -118,16 +160,44 @@ async function isWorktree($: any, directory: string): Promise<boolean> {
 async function hasChanges($: any): Promise<boolean> {
   try {
     const result = await $`git status --porcelain`.quiet()
-    return result.stdout.toString().trim().length > 0
+    const hasUncommitted = result.stdout.toString().trim().length > 0
+    return hasUncommitted
   } catch {
     return false
   }
 }
 
-async function makeCommit($: any, message: string, client: any): Promise<boolean> {
+async function makeCommit($: any, message: string, client: OpencodeClient): Promise<boolean> {
   try {
+    await client.app.log({
+      body: {
+        service: "opencode-autocommit",
+        level: "info",
+        message: "Staging all changes",
+      },
+    })
+    
     await $`git add -A`.quiet()
+    
+    await client.app.log({
+      body: {
+        service: "opencode-autocommit",
+        level: "info",
+        message: "Creating commit",
+        extra: { messageLength: message.length },
+      },
+    })
+    
     await $`git commit -m ${message}`.quiet()
+    
+    await client.app.log({
+      body: {
+        service: "opencode-autocommit",
+        level: "info",
+        message: "Commit created successfully",
+      },
+    })
+    
     return true
   } catch (error) {
     await client.app.log({
@@ -143,7 +213,7 @@ async function makeCommit($: any, message: string, client: any): Promise<boolean
 }
 
 export const AutoCommitPlugin: Plugin = async ({ client, $, directory, worktree }) => {
-  const fileSettings = await loadSettingsFromFile(directory)
+  const fileSettings = await loadSettingsFromFile(directory, client)
   const settings: AutoCommitSettings = {
     mode: "worktree",
     maxCommitLength: 10000,
@@ -195,7 +265,7 @@ export const AutoCommitPlugin: Plugin = async ({ client, $, directory, worktree 
     args: {},
     async execute(_args, _context) {
       try {
-        const fileSettings = await loadSettingsFromFile(directory)
+        const fileSettings = await loadSettingsFromFile(directory, client)
         const defaults: AutoCommitSettings = {
           mode: "worktree",
           maxCommitLength: 10000,
@@ -215,32 +285,117 @@ export const AutoCommitPlugin: Plugin = async ({ client, $, directory, worktree 
     event: async ({ event }) => {
       if (event.type !== "session.idle") return
       
-      if (settings.mode === "disabled") return
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "info",
+          message: "Session idle event received",
+          extra: { mode: settings.mode },
+        },
+      })
+      
+      if (settings.mode === "disabled") {
+        await client.app.log({
+          body: {
+            service: "opencode-autocommit",
+            level: "info",
+            message: "Auto-commit disabled",
+          },
+        })
+        return
+      }
       
       const isInWorktree = await isWorktree($, worktree)
-      if (settings.mode === "worktree" && !isInWorktree) return
+      
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "info",
+          message: "Checked if in worktree",
+          extra: { isInWorktree, mode: settings.mode },
+        },
+      })
+      
+      if (settings.mode === "worktree" && !isInWorktree) {
+        await client.app.log({
+          body: {
+            service: "opencode-autocommit",
+            level: "info",
+            message: "Not in worktree, skipping commit",
+          },
+        })
+        return
+      }
       
       const { sessionID } = event.properties
+      
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "info",
+          message: "Fetching session messages",
+          extra: { sessionID },
+        },
+      })
       
       const response = await client.session.messages({ sessionID })
       const messages = response.data ?? []
       
       const turn = getLastTurn(messages)
-      if (!turn || turn.userMessageID === lastCommittedTurnID) return
+      
+      if (!turn) {
+        await client.app.log({
+          body: {
+            service: "opencode-autocommit",
+            level: "info",
+            message: "No turn found in messages",
+          },
+        })
+        return
+      }
+      
+      if (turn.userMessageID === lastCommittedTurnID) {
+        await client.app.log({
+          body: {
+            service: "opencode-autocommit",
+            level: "info",
+            message: "Turn already committed, skipping",
+            extra: { userMessageID: turn.userMessageID },
+          },
+        })
+        return
+      }
       
       lastCommittedTurnID = turn.userMessageID
+      
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "info",
+          message: "Processing new turn",
+          extra: { userMessageID: turn.userMessageID },
+        },
+      })
       
       const hasUncommittedChanges = await hasChanges($)
       if (!hasUncommittedChanges) {
         await client.app.log({
           body: {
             service: "opencode-autocommit",
-            level: "debug",
+            level: "info",
             message: "No changes to commit",
           },
         })
         return
       }
+      
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "info",
+          message: "Found uncommitted changes, generating commit summary",
+        },
+      })
       
       try {
         const summary = await generateCommitSummary(turn, settings, client)
@@ -252,6 +407,15 @@ ${turn.userPrompt}
 
 ## LLM Response
 ${turn.assistantResponse}`
+        
+        await client.app.log({
+          body: {
+            service: "opencode-autocommit",
+            level: "info",
+            message: "Created commit message",
+            extra: { summary, messageLength: commitMessage.length },
+          },
+        })
         
         const truncatedMessage = truncateCommitMessage(commitMessage, settings.maxCommitLength)
         
