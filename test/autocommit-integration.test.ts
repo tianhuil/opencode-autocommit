@@ -122,70 +122,33 @@ I'll create a test file for you.`;
 });
 
 test("integration test: file creation and modification", async () => {
-  // Create a Python file as mentioned in the overview
-  await Bun.write(`${testDir}/add.py`, `def add(a, b):
-    return a + b
-`);
-
-  // Stage and commit
-  await $`cd ${testDir} && git add add.py`.quiet();
-  await $`cd ${testDir} && git commit -m "Add Python function\n\n## User Prompt\nAdd a python function to file ./add.py that adds two numbers.\n\n## LLM Response\nI'll create a Python function that adds two numbers."`.quiet();
+  // Use opencode to create the text file
+  await $`cd ${testDir} &&  opencode run -m zai-coding-plan/glm-4.7-flash "Write 'Hello World!' in file ./hello.txt"`.quiet();
 
   // Verify file exists
-  const fileExists = await $`test -f ${testDir}/add.py`.quiet().then(() => true).catch(() => false);
+  const fileExists = await $`test -f ${testDir}/hello.txt`.quiet().then(() => true).catch(() => false);
   expect(fileExists).toBe(true);
 
   // Verify file content
-  const fileContent = await Bun.file(`${testDir}/add.py`).text();
-  expect(fileContent).toContain("def add(a, b):");
-  expect(fileContent).toContain("return a + b");
+  const fileContent = await Bun.file(`${testDir}/hello.txt`).text();
+  expect(fileContent).toContain("Hello World!");
 
   // Verify commit was created
   const commitCount = await $`cd ${testDir} && git rev-list --count HEAD`.text();
   expect(parseInt(commitCount)).toBeGreaterThan(1);
 
-  // Verify commit contains the Python file
+  // Verify commit contains the text file
   const filesChanged = await $`cd ${testDir} && git show --name-only --format="" HEAD`.text();
-  expect(filesChanged).toContain("add.py");
+  expect(filesChanged).toContain("hello.txt");
+
+  // Verify commit message format
+  const fullCommitMessage = await $`cd ${testDir} && git log -1 --format=%B`.text();
+  expect(fullCommitMessage).toContain("## User Prompt");
+  expect(fullCommitMessage).toContain("## LLM Response");
+  expect(fullCommitMessage).toContain("Write 'Hello World!' in file ./hello.txt");
+
+  const lines = fullCommitMessage.split("\n");
+  const firstLine = lines[0] || "";
+  expect(firstLine.length).toBeLessThanOrEqual(50);
 });
 
-test("integration test: commit message format validation", async () => {
-  // Test various commit message formats
-  const testCases = [
-    {
-      message: `Fix bug in parser
-
-## User Prompt
-Fix the parser bug
-
-## LLM Response
-Fixed it`,
-      expectedSummary: "Fix bug in parser",
-    },
-    {
-      message: `Add new feature
-
-## User Prompt
-Add a new feature
-
-## LLM Response
-Feature added successfully`,
-      expectedSummary: "Add new feature",
-    },
-  ];
-
-  for (const testCase of testCases) {
-    await Bun.write(`${testDir}/temp.txt`, `temp-${Date.now()}\n`);
-    await $`cd ${testDir} && git add temp.txt`.quiet();
-    await $`cd ${testDir} && git commit -m ${testCase.message}`.quiet();
-
-    const commitMessage = await $`cd ${testDir} && git log -1 --format=%B`.text();
-    const lines = commitMessage.split("\n");
-    const firstLine = lines[0] || "";
-    
-    expect(firstLine).toBe(testCase.expectedSummary);
-    expect(firstLine.length).toBeLessThanOrEqual(50);
-    expect(commitMessage).toContain("## User Prompt");
-    expect(commitMessage).toContain("## LLM Response");
-  }
-});
