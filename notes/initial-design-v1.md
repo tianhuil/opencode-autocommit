@@ -73,3 +73,7 @@ There is a tool
 - `getSettings() ZAutoCommitSettings: ` 
 - `setSettings(param: Partial<ZAutoCommitSettings>): ZAutoCommitSettings`.
 - `setSettings(): ZAutoCommitSettings` (resets to returns current settings)
+
+## Additional References
+
+- @notes/opencode-plugin-session-idle.md
