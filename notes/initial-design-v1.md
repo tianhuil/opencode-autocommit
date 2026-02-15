@@ -29,7 +29,7 @@ The user prompt is the verbatim user prompt
 The LLM Response is the response of the LLM (verbatim)
 
 ## Settings
-Here are the settings.
+Here are the settings.  The type will be defined and validated by zod.
 
 ### `mode`:
 - `'disabled'` (plugin is disabled)
