@@ -9,8 +9,7 @@ In opencode, a **turn** is a complete interaction cycle consisting of:
 3. Turn completes when the AI finishes and the `session.idle` event fires
 
 ## General functionality
-- **Before a turn starts**: Upon a user entering a prompt, the plugin ensures that there are no uncommitted changes (git status shows no files).  If there are changes, stop the turn and respond with an error message asking the user to commit all changes.
-- **After a turn completes**: Every time a turn completes, the plugin intercepts the signal and commits all changes on the branch.
+Every time a turn completes (`session.idle` event fires), the plugin intercepts the signal and commits all changes on the branch.
 
 ### worktrees
 This needs to work with worktrees.  If the user is on a worktree, all changes apply to the worktree, not the main worktree.
@@ -84,3 +83,5 @@ There is a tool
 ## Additional References
 
 - @notes/opencode-plugin-session-idle.md
+- @notes/opencode-pre-prompt-hook.md
+- @notes/opencode-plugin-user-messages.md
