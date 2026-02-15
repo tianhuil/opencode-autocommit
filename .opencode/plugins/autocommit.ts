@@ -1,9 +1,8 @@
 import type { Plugin, PluginInput } from "@opencode-ai/plugin"
 import { tool, tool as toolSchema } from "@opencode-ai/plugin"
 import { z } from "zod"
-import * as fs from "fs/promises"
-import * as path from "path"
 import * as yaml from "yaml"
+import Bun from "bun"
 
 const ZAutoCommitMode = z.enum(["disabled", "worktree", "enabled"])
 
@@ -27,9 +26,10 @@ interface LastTurn {
 
 async function loadSettingsFromFile(directory: string, client: OpencodeClient): Promise<Partial<AutoCommitSettings> | null> {
   try {
-    const settingsPath = path.join(directory, ".opencode", "auto-commit.settings.yml")
+    const settingsPath = `${directory}/.opencode/auto-commit.settings.yml`
     
-    const content = await fs.readFile(settingsPath, "utf-8")
+    const file = Bun.file(settingsPath)
+    const content = await file.text()
     
     const parsed = yaml.parse(content)
     const settings = ZAutoCommitSettings.partial().parse(parsed)
