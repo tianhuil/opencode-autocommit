@@ -2,7 +2,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 import { tool, tool as toolSchema } from "@opencode-ai/plugin"
 import { z } from "zod"
 
-const ZAutoCommitMode = z.enum(["disabled", "worktree", "enabled"])
+const ZAutoCommitMode = z.enum(["disabled", "worktree", "enabled", "immediate"])
 
 const ZAutoCommitSettings = z.object({
   mode: ZAutoCommitMode.default("worktree"),
@@ -211,38 +211,22 @@ export const AutoCommitPlugin: Plugin = async ({ client, $, directory, worktree 
     },
   })
   
-  return {
-    event: async ({ event }) => {
-      if (event.type !== "session.idle") return
-      
-      if (settings.mode === "disabled") return
-      
-      const isInWorktree = await isWorktree($, worktree)
-      if (settings.mode === "worktree" && !isInWorktree) return
-      
-      const { sessionID } = event.properties
-      
-      const response = await client.session.messages({ sessionID })
-      const messages = response.data ?? []
-      
-      const turn = getLastTurn(messages)
-      if (!turn || turn.userMessageID === lastCommittedTurnID) return
-      
-      lastCommittedTurnID = turn.userMessageID
-      
-      const hasUncommittedChanges = await hasChanges($)
-      if (!hasUncommittedChanges) {
-        await client.app.log({
-          body: {
-            service: "opencode-autocommit",
-            level: "debug",
-            message: "No changes to commit",
-          },
-        })
-        return
-      }
-      
+  const triggerCommitTool = tool({
+    description: "Manually trigger a commit of current changes (useful for testing)",
+    args: {},
+    async execute(_args, context) {
       try {
+        const sessionID = context.sessionID
+        if (!sessionID) {
+          throw new Error("No session ID available")
+        }
+        
+        const messages = await client.session.messages({ sessionID })
+        const turn = getLastTurn(messages.data ?? [])
+        if (!turn) {
+          throw new Error("No turn found")
+        }
+        
         const summary = await generateCommitSummary(turn, settings, client)
         
         const commitMessage = `${summary}
@@ -256,33 +240,148 @@ ${turn.assistantResponse}`
         const truncatedMessage = truncateCommitMessage(commitMessage, settings.maxCommitLength)
         
         const success = await makeCommit($, truncatedMessage, client)
-        
-        if (success) {
-          await client.app.log({
-            body: {
-              service: "opencode-autocommit",
-              level: "info",
-              message: "Committed changes successfully",
-              extra: { summary },
-            },
-          })
+        if (!success) {
+          throw new Error("Failed to create commit")
         }
+        
+        return JSON.stringify({ success: true, summary }, null, 2)
       } catch (error) {
+        throw new Error(`Failed to trigger commit: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    },
+  })
+  
+  async function performCommit(sessionID: string) {
+    await client.app.log({
+      body: {
+        service: "opencode-autocommit",
+        level: "info",
+        message: `performCommit called with sessionID: ${sessionID}, mode: ${settings.mode}`,
+      },
+    })
+    
+    if (settings.mode === "disabled") {
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "debug",
+          message: "Skipping commit: mode is disabled",
+        },
+      })
+      return false
+    }
+    
+    const isInWorktree = await isWorktree($, worktree)
+    if (settings.mode === "worktree" && !isInWorktree) {
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "debug",
+          message: `Skipping commit: mode is worktree but not in worktree (worktree: ${worktree})`,
+        },
+      })
+      return false
+    }
+    
+    const response = await client.session.messages({ sessionID })
+    const messages = response.data ?? []
+    
+    const turn = getLastTurn(messages)
+    if (!turn || turn.userMessageID === lastCommittedTurnID) return false
+    
+    lastCommittedTurnID = turn.userMessageID
+    
+    const hasUncommittedChanges = await hasChanges($)
+    if (!hasUncommittedChanges) {
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "debug",
+          message: "No changes to commit",
+        },
+      })
+      return false
+    }
+    
+    try {
+      const summary = await generateCommitSummary(turn, settings, client)
+      
+      const commitMessage = `${summary}
+
+## User Prompt
+${turn.userPrompt}
+
+## LLM Response
+${turn.assistantResponse}`
+      
+      const truncatedMessage = truncateCommitMessage(commitMessage, settings.maxCommitLength)
+      
+      const success = await makeCommit($, truncatedMessage, client)
+      
+      if (success) {
         await client.app.log({
           body: {
             service: "opencode-autocommit",
-            level: "error",
-            message: "Error during auto-commit",
-            extra: { error: error instanceof Error ? error.message : String(error) },
+            level: "info",
+            message: "Committed changes successfully",
+            extra: { summary },
           },
         })
       }
+      return success
+    } catch (error) {
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "error",
+          message: "Error during auto-commit",
+          extra: { error: error instanceof Error ? error.message : String(error) },
+        },
+      })
+      return false
+    }
+  }
+  
+  return {
+    event: async ({ event }) => {
+      if (event.type !== "session.idle") return
+      
+      await performCommit(event.properties.sessionID)
+    },
+    
+    "chat.message": async ({ sessionID }) => {
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "info",
+          message: `chat.message hook called with sessionID: ${sessionID}, mode: ${settings.mode}`,
+        },
+      })
+      
+      if (settings.mode !== "immediate") return
+      
+      await performCommit(sessionID)
+    },
+    
+    "tool.execute.after": async ({ tool, sessionID }) => {
+      await client.app.log({
+        body: {
+          service: "opencode-autocommit",
+          level: "info",
+          message: `tool.execute.after hook called: tool=${tool}, sessionID=${sessionID}, mode=${settings.mode}`,
+        },
+      })
+      
+      if (settings.mode !== "immediate") return
+      
+      await performCommit(sessionID)
     },
     
     tool: {
       getAutoCommitSettings: getSettingsTool,
       setAutoCommitSettings: setSettingsTool,
       resetAutoCommitSettings: resetSettingsTool,
+      triggerAutoCommit: triggerCommitTool,
     },
   }
 }
