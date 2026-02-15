@@ -42,7 +42,7 @@ Here are the settings.  The type will be defined and validated by zod.
 ### `mode`:
 - `'disabled'`: plugin is disabled
 - `'worktree'`: plugin is enabled only on worktrees but not on the main worktree; this is the default value
-- `'enable'`: plugin is enabled only on worktrees and the main worktree
+- `'enabled'`: plugin is enabled only on worktrees and the main worktree
 
 ### `commitModel`
 This is the name of the model for opencode to use to generate a commit message.  If it is `undefined`, we should use whatever the current model is.
@@ -58,7 +58,7 @@ If the total commit message exceeds `maxCommitLength`, the truncation is applied
 const ZAutoCommitMode = z.enum(['disabled', 'worktree', 'enabled']);
 
 const ZAutoCommitSettings = z.object({
-  mode: AutoCommitMode.default('disabled'),
+  mode: AutoCommitMode.default('worktree'),
   commitModel: z.string().optional(), // If not set, use opencode's default model
   maxCommitLength: z.number().min(100).default(10000), // Maximum commit message length in characters
 });
@@ -78,7 +78,9 @@ There is a slash command `/autocommit` which can be used to fetch the mode or se
 There is a tool
 - `getSettings() ZAutoCommitSettings: ` 
 - `setSettings(param: Partial<ZAutoCommitSettings>): ZAutoCommitSettings`.
-- `setSettings(): ZAutoCommitSettings` (resets to returns current settings)
+- `resetSettings(): ZAutoCommitSettings` (resets to defaults from `.opencode/auto-commit.settings.yml` if it exists or general defaults if not.)
+
+Both `setSettings` and `resetSettings` return the new settings.
 
 ## Additional References
 
