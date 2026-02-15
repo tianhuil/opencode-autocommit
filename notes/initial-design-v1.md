@@ -82,6 +82,12 @@ There is a tool
 
 Both `setSettings` and `resetSettings` return the new settings.
 
+## Error Handling
+I will handle errors by:
+1. Use Bun's `$`'s `nothrow()` to not throw on errors.
+2. Git commands will return an `exitCode !== 0`.
+3. Use `client.app.log()` with error level to report error but otherwise, do not notify user.
+
 ## Additional References
 
 In @notes/opencode-plugin-session-idle.md, use the "Complete Example: Auto-Commit Plugin" as an implementation guide.
