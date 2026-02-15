@@ -77,19 +77,47 @@ LLM response: ${turn.assistantResponse}
 
 Return ONLY the commit message, nothing else.`
 
-  let response: any
-  if (settings.commitModel) {
-    response = await client.app.generate({
-      model: settings.commitModel,
-      prompt,
-    })
-  } else {
-    response = await client.app.generate({
-      prompt,
-    })
-  }
+  let summary: string
   
-  const summary = response.text?.trim() || "Auto-commit"
+  try {
+    const tempSession = await client.session.create({
+      body: { title: "temp-commit-summary" }
+    })
+    
+    if (!tempSession.data) {
+      throw new Error("Failed to create temporary session")
+    }
+    
+    const result = await client.session.prompt({
+      path: { id: tempSession.data.id },
+      body: {
+        parts: [{ 
+          type: "text", 
+          text: prompt
+        }] as any,
+      },
+    })
+    
+    if (result.data && result.data.parts && result.data.parts[0]) {
+      summary = (result.data.parts[0] as any).text?.trim() || "Auto-commit"
+    } else {
+      summary = "Auto-commit"
+    }
+    
+    await client.session.delete({
+      path: { id: tempSession.data.id }
+    })
+  } catch (error) {
+    await client.app.log({
+      body: {
+        service: "opencode-autocommit",
+        level: "error",
+        message: "Failed to generate commit summary using temporary session",
+        extra: { error: error instanceof Error ? error.message : String(error) },
+      },
+    })
+    summary = "Auto-commit"
+  }
   
   await client.app.log({
     body: {
