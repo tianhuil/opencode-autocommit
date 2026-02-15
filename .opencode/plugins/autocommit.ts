@@ -1,5 +1,4 @@
-import type { Plugin } from "@opencode-ai/plugin"
-import type { OpencodeClient } from "@opencode-ai/sdk"
+import type { Plugin, PluginInput } from "@opencode-ai/plugin"
 import { tool, tool as toolSchema } from "@opencode-ai/plugin"
 import { z } from "zod"
 import * as fs from "fs/promises"
@@ -16,6 +15,9 @@ const ZAutoCommitSettings = z.object({
 
 type AutoCommitMode = z.infer<typeof ZAutoCommitMode>
 type AutoCommitSettings = z.infer<typeof ZAutoCommitSettings>
+
+type OpencodeClient = PluginInput["client"]
+type BunShell = PluginInput["$"]
 
 interface LastTurn {
   userMessageID: string
@@ -174,7 +176,7 @@ function getLastTurn(messages: any[]): LastTurn | null {
   }
 }
 
-async function isWorktree($: any, directory: string): Promise<boolean> {
+async function isWorktree($: BunShell, directory: string): Promise<boolean> {
   try {
     const result = await $`git rev-parse --show-toplevel`.quiet()
     const gitRoot = result.stdout.toString().trim()
@@ -185,7 +187,7 @@ async function isWorktree($: any, directory: string): Promise<boolean> {
   }
 }
 
-async function hasChanges($: any): Promise<boolean> {
+async function hasChanges($: BunShell): Promise<boolean> {
   try {
     const result = await $`git status --porcelain`.quiet()
     const hasUncommitted = result.stdout.toString().trim().length > 0
@@ -195,7 +197,7 @@ async function hasChanges($: any): Promise<boolean> {
   }
 }
 
-async function makeCommit($: any, message: string, client: OpencodeClient): Promise<boolean> {
+async function makeCommit($: BunShell, message: string, client: OpencodeClient): Promise<boolean> {
   try {
     await client.app.log({
       body: {
