@@ -39,11 +39,28 @@ Here are the settings.  The type will be defined and validated by zod.
 ### `commitModel`
 This is the name of the model for opencode to use to generate a commit message.  If it is `undefined`, we should use whatever the current model is.
 
-## Config File
-If there is a `.opencode/auto-commit.config.yml` file, which contains the yml representation of the settings schema.  It will be read for validation and the values are used as initial settings (but values can be changed with slash commands and tools below).
+### Zod Schema
+```ts
+const ZAutoCommitMode = z.enum(['disabled', 'worktree', 'enabled']);
+
+const ZAutoCommitSettings = z.object({
+  mode: AutoCommitMode.default('disabled'),
+  commitModel: z.string().optional(), // If not set, use opencode's default model
+});
+
+// Derived TypeScript types
+type ZAutoCommitMode = z.infer<typeof ZAutoCommitMode>;
+type ZAutoCommitSettings = z.infer<typeof ZAutoCommitSettings>;
+```
+
+## Settings File
+If there is a `.opencode/auto-commit.settings.yml` file, which contains the yml representation of the settings schema.  It will be read for validation and the values are used as initial settings and override the earlier given defaults.  The values can be changed with slash commands and tools below.
 
 ## Slash commands
 There is a slash command `/autocommit` which can be used to fetch the mode or set it.  It calls the tools listed below
 
 ## Tools
-There is a tool `getSettings` and `setSettings`.
+There is a tool
+- `getSettings() ZAutoCommitSettings: ` 
+- `setSettings(param: Partial<ZAutoCommitSettings>): ZAutoCommitSettings`.
+- `setSettings(): ZAutoCommitSettings` (resets to returns current settings)
