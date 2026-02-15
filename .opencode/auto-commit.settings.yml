@@ -1,0 +1,18 @@
+# Auto-Commit Plugin Settings
+
+# Mode: disabled | worktree | enabled
+# - disabled: Plugin is completely disabled
+# - worktree: Plugin is enabled only on worktrees, not on main worktree (default)
+# - enabled: Plugin is enabled on both worktrees and main worktree
+mode: worktree
+
+# Model for generating commit messages (optional)
+# If not set, uses the current session's model
+# Example: anthropic/claude-3-5-sonnet-20241022
+# commitModel: anthropic/claude-3-5-sonnet-20241022
+
+# Maximum commit message length in characters (default: 10000)
+# If the generated commit message exceeds this length, the LLM Response section 
+# will be truncated from the end with "..." suffix
+# Minimum: 100
+maxCommitLength: 10000
