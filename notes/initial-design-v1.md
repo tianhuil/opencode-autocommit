@@ -84,4 +84,4 @@ Both `setSettings` and `resetSettings` return the new settings.
 
 ## Additional References
 
-- @notes/opencode-plugin-session-idle.md
+In @notes/opencode-plugin-session-idle.md, use the "Complete Example: Auto-Commit Plugin" as an implementation guide.
