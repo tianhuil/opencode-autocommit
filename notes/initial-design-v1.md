@@ -33,8 +33,8 @@ Here are the settings.  The type will be defined and validated by zod.
 
 ### `mode`:
 - `'disabled'`: plugin is disabled
-- `'worktree'`: plugin is enabled only on worktrees but not on the primary branch; this is the default value
-- `'enable'`: plugin is enabled only on worktrees and the primary branch
+- `'worktree'`: plugin is enabled only on worktrees but not on the main worktree; this is the default value
+- `'enable'`: plugin is enabled only on worktrees and the main worktree
 
 ### `commitModel`
 This is the name of the model for opencode to use to generate a commit message.  If it is `undefined`, we should use whatever the current model is.
