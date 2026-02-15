@@ -40,7 +40,7 @@ afterAll(async () => {
   }
 });
 
-test("integration test: plugin setup", async () => {
+test("integration test: plugin setup with plugin", async () => {
   // Verify test directory exists
   const dirExists = await $`test -d ${testDir}`.quiet().then(() => true).catch(() => false);
   expect(dirExists).toBe(true);
@@ -97,9 +97,22 @@ test("integration test: file creation and modification", async () => {
   const fileContent = await Bun.file(`${testDir}/hello.txt`).text();
   expect(fileContent).toContain("Hello World!");
 
-  // Verify commit was created
-  const commitCount = await $`cd ${testDir} && git rev-list --count HEAD`.text();
-  expect(parseInt(commitCount)).toBeGreaterThan(1);
+  // Wait for commit to be created (with retry)
+  let commitCount = "0";
+  const maxRetries = 20;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      commitCount = await $`cd ${testDir} && git rev-list --count HEAD`.text();
+      if (parseInt(commitCount) >= 1) {
+        break;
+      }
+    } catch (e) {
+      // Expected when no commits exist yet
+    }
+    // Wait 500ms between retries
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  expect(parseInt(commitCount)).toBeGreaterThanOrEqual(1);
 
   // Verify commit contains the text file
   const filesChanged = await $`cd ${testDir} && git show --name-only --format="" HEAD`.text();
