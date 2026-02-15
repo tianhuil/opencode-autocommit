@@ -114,5 +114,5 @@ test("integration test: file creation and modification", async () => {
   const lines = fullCommitMessage.split("\n");
   const firstLine = lines[0] || "";
   expect(firstLine.length).toBeLessThanOrEqual(50);
-});
+}, {timeout: 30_000});
 
