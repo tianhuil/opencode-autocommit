@@ -20,14 +20,14 @@ The plugin is automatically loaded from `.opencode/plugins/` directory. No addit
 Create `.opencode/auto-commit.settings.yml` to configure default settings:
 
 ```yaml
-mode: worktree  # disabled | worktree | enabled
+mode: disabled  # disabled | worktree | enabled
 commitModel: anthropic/claude-3-5-sonnet-20241022  # optional, uses current model if not set
 maxCommitLength: 10000  # maximum commit message length in characters
 ```
 
 ### Settings
 
-- **mode** (default: `worktree`):
+- **mode** (default: `disabled`):
   - `disabled`: Plugin is completely disabled
   - `worktree`: Plugin is enabled only on worktrees, not on main worktree
   - `enabled`: Plugin is enabled on both worktrees and main worktree

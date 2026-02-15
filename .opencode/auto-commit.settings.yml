@@ -1,8 +1,8 @@
 # Auto-Commit Plugin Settings
 
 # Mode: disabled | worktree | enabled
-# - disabled: Plugin is completely disabled
-# - worktree: Plugin is enabled only on worktrees, not on main worktree (default)
+# - disabled: Plugin is completely disabled (default)
+# - worktree: Plugin is enabled only on worktrees, not on main worktree
 # - enabled: Plugin is enabled on both worktrees and main worktree
 mode: worktree
 

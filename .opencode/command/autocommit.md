@@ -12,8 +12,8 @@ Use the auto-commit plugin tools:
 Available settings:
 
 - **mode**: `disabled`, `worktree`, or `enabled`
-  - `disabled`: Plugin is completely disabled
-  - `worktree`: Plugin is enabled only on worktrees (default)
+  - `disabled`: Plugin is completely disabled (default)
+  - `worktree`: Plugin is enabled only on worktrees
   - `enabled`: Plugin is enabled on both worktrees and main worktree
 
 - **commitModel**: Model name for generating commit messages (optional)

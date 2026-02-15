@@ -40,8 +40,8 @@ The message maybe truncated per `maxCommitLength`.
 Here are the settings.  The type will be defined and validated by zod.
 
 ### `mode`:
-- `'disabled'`: plugin is disabled
-- `'worktree'`: plugin is enabled only on worktrees but not on the main worktree; this is the default value
+- `'disabled'`: plugin is disabled (default)
+- `'worktree'`: plugin is enabled only on worktrees but not on the main worktree
 - `'enabled'`: plugin is enabled only on worktrees and the main worktree
 
 ### `commitModel`
@@ -58,7 +58,7 @@ If the total commit message exceeds `maxCommitLength`, the truncation is applied
 const ZAutoCommitMode = z.enum(['disabled', 'worktree', 'enabled']);
 
 const ZAutoCommitSettings = z.object({
-  mode: AutoCommitMode.default('worktree'),
+  mode: AutoCommitMode.default('disabled'),
   commitModel: z.string().optional(), // If not set, use opencode's default model
   maxCommitLength: z.number().min(100).default(10000), // Maximum commit message length in characters
 });

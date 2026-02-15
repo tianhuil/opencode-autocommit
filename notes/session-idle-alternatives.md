@@ -303,7 +303,7 @@ test("plugin logic: generates commit message correctly", async () => {
   };
 
   const settings = {
-    mode: "worktree",
+    mode: "disabled",
     maxCommitLength: 10000,
   };
 

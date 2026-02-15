@@ -7,7 +7,7 @@ import Bun from "bun"
 const ZAutoCommitMode = z.enum(["disabled", "worktree", "enabled"])
 
 const ZAutoCommitSettings = z.object({
-  mode: ZAutoCommitMode.default("worktree"),
+  mode: ZAutoCommitMode.default("disabled"),
   commitModel: z.string().optional(),
   maxCommitLength: z.number().min(100).default(10000),
 })
@@ -257,7 +257,7 @@ async function makeCommit($: BunShell, message: string, client: OpencodeClient):
 export const AutoCommitPlugin: Plugin = async ({ client, $, directory, worktree }) => {
   const fileSettings = await loadSettingsFromFile(directory, client)
   const settings: AutoCommitSettings = {
-    mode: "worktree",
+    mode: "disabled",
     maxCommitLength: 10000,
     ...fileSettings,
   }
@@ -309,7 +309,7 @@ export const AutoCommitPlugin: Plugin = async ({ client, $, directory, worktree 
       try {
         const fileSettings = await loadSettingsFromFile(directory, client)
         const defaults: AutoCommitSettings = {
-          mode: "worktree",
+          mode: "disabled",
           maxCommitLength: 10000,
           ...fileSettings,
         }
@@ -335,7 +335,7 @@ export const AutoCommitPlugin: Plugin = async ({ client, $, directory, worktree 
         const settingsPath = `${directory}/.opencode/auto-commit.settings.yml`
         
         const newSettings: Partial<AutoCommitSettings> = {
-          mode: args.mode ? ZAutoCommitMode.parse(args.mode) : "worktree",
+          mode: args.mode ? ZAutoCommitMode.parse(args.mode) : "disabled",
           maxCommitLength: args.maxCommitLength ?? 10000,
         }
         
