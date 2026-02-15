@@ -22,7 +22,7 @@ The commit message takes the following format.  It is 3 sections separated by tw
 {full LLM response}
 ```
 
-The summary is a one line summary (10 words max) of this interaction (user prompt + llm response).
+The summary is a one line summary (no longer than 50 chars) of this interaction (user prompt + llm response).
 
 The user prompt is the verbatim user prompt
 
