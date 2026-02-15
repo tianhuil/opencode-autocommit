@@ -6,7 +6,7 @@ I am building an opencode plugin called opencode-autocommit.  When enabled:
 - Every time and the AI finishes (`"session.idle"`), the plugin intercepts the signal and commits all changes on the branch.
 
 ### worktrees
-This needs to work with worktrees.  If the user is on a worktree, all changes apply to the worktree, not the main branch.
+This needs to work with worktrees.  If the user is on a worktree, all changes apply to the worktree, not the main worktree.
 
 
 ### Commit message!
