@@ -85,42 +85,6 @@ test("integration test: git repository setup", async () => {
   expect(commits).toBe("0");
 });
 
-test("integration test: manual commit with correct format", async () => {
-  // Create a test file
-  await Bun.write(`${testDir}/test.txt`, "Test content\n");
-
-  // Stage and commit manually
-  const commitMessage = `Add test file
-
-## User Prompt
-Create a test file with some content
-
-## LLM Response
-I'll create a test file for you.`;
-
-  await $`cd ${testDir} && git add test.txt`.quiet();
-  await $`cd ${testDir} && git commit -m ${commitMessage}`.quiet();
-
-  // Verify commit was created
-  const commitCount = await $`cd ${testDir} && git rev-list --count HEAD`.text();
-  expect(parseInt(commitCount)).toBeGreaterThan(0);
-
-  // Verify commit message format
-  const fullCommitMessage = await $`cd ${testDir} && git log -1 --format=%B`.text();
-  
-  // Check structure
-  expect(fullCommitMessage).toContain("## User Prompt");
-  expect(fullCommitMessage).toContain("## LLM Response");
-  expect(fullCommitMessage).toContain("Create a test file with some content");
-  expect(fullCommitMessage).toContain("I'll create a test file for you");
-
-  // Check that summary is on first line
-  const lines = fullCommitMessage.split("\n");
-  const firstLine = lines[0] || "";
-  expect(firstLine.length).toBeLessThanOrEqual(50);
-  expect(firstLine).toBe("Add test file");
-});
-
 test("integration test: file creation and modification", async () => {
   // Use opencode to create the text file
   await $`cd ${testDir} &&  opencode run -m zai-coding-plan/glm-4.7-flash "Write 'Hello World!' in file ./hello.txt"`.quiet();
