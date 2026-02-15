@@ -79,8 +79,6 @@ LLM response: ${turn.assistantResponse}
 
 Return ONLY the commit message, nothing else.`
 
-  let summary: string
-  
   try {
     const tempSession = await client.session.create({
       body: { title: "temp-commit-summary" }
@@ -99,16 +97,29 @@ Return ONLY the commit message, nothing else.`
         }] as any,
       },
     })
-    
-    if (result.data && result.data.parts && result.data.parts[0]) {
-      summary = (result.data.parts[0] as any).text?.trim() || "Auto-commit"
-    } else {
-      summary = "Auto-commit"
+
+    const textParts = result.data?.parts.filter((p) => p.type === 'text')
+    const summary = textParts?.map((p) => p.text).join("\n").trim()
+
+    if (!summary) {
+      throw new Error("No text response from commit summary prompt")
     }
+
     
     await client.session.delete({
       path: { id: tempSession.data.id }
     })
+  
+    await client.app.log({
+      body: {
+        service: "opencode-autocommit",
+        level: "info",
+        message: "Commit summary generated",
+        extra: { summary },
+      },
+    })
+    
+    return summary
   } catch (error) {
     await client.app.log({
       body: {
@@ -118,19 +129,8 @@ Return ONLY the commit message, nothing else.`
         extra: { error: error instanceof Error ? error.message : String(error) },
       },
     })
-    summary = "Auto-commit"
+    return "Auto-commit"
   }
-  
-  await client.app.log({
-    body: {
-      service: "opencode-autocommit",
-      level: "info",
-      message: "Commit summary generated",
-      extra: { summary },
-    },
-  })
-  
-  return summary
 }
 
 function truncateCommitMessage(
@@ -217,7 +217,19 @@ async function makeCommit($: BunShell, message: string, client: OpencodeClient):
         extra: { messageLength: message.length },
       },
     })
-    
+  } catch (error) {
+    await client.app.log({
+      body: {
+        service: "opencode-autocommit",
+        level: "error",
+        message: "Failed to stage changes",
+        extra: { error: error instanceof Error ? error.message : String(error) },
+      },
+    })
+    return false
+  }
+  
+  try {
     await $`git commit -m ${message}`.quiet()
     
     await client.app.log({
