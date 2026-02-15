@@ -6,7 +6,7 @@ However, here are some potential approaches:
 
 ## Workaround Options
 
-### 1. Create a Temporary Session (Recommended)
+Create a Temporary Session (Recommended)
 
 Create a short-lived session for one-off tasks like generating commit messages, then delete it:
 
@@ -42,42 +42,3 @@ export const CommitNamePlugin: Plugin = async ({ client }) => {
   }
 }
 ```
-
-### 2. Use the Provider API Directly
-
-Since OpenCode likely uses provider APIs under the hood, you could make direct API calls to your LLM provider (Anthropic, OpenAI, etc.) from your plugin:
-
-```typescript
-export const CommitNamePlugin: Plugin = async ({ client }) => {
-  return {
-    "tool.execute.after": async (input, output) => {
-      // Direct API call (not through OpenCode)
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": process.env.ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "claude-3-5-sonnet-20241022",
-          max_tokens: 100,
-          messages: [{
-            role: "user",
-            content: "Generate a commit message for: ..."
-          }]
-        })
-      })
-      
-      const data = await response.json()
-      return data.content[0].text
-    }
-  }
-}
-```
-
-### 3. Check for Future SDK Updates
-
-You might want to check the OpenCode GitHub issues or ask in their Discord about adding an ephemeral prompt feature. This seems like a reasonable use case that others might need too.
-
-The temporary session approach is probably cleanest if you want to stay within the OpenCode ecosystem, while direct API calls give you complete control but bypass OpenCode's configuration and session management.
