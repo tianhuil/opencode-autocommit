@@ -83,5 +83,3 @@ There is a tool
 ## Additional References
 
 - @notes/opencode-plugin-session-idle.md
-- @notes/opencode-pre-prompt-hook.md
-- @notes/opencode-plugin-user-messages.md
