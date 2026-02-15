@@ -322,6 +322,53 @@ export const AutoCommitPlugin: Plugin = async ({ client, $, directory, worktree 
       }
     },
   })
+
+  const initTool = tool({
+    description: "Initialize auto-commit plugin by creating the .opencode/auto-commit.settings.yml file in the current repository",
+    args: {
+      mode: toolSchema.schema.string().optional(),
+      commitModel: toolSchema.schema.string().optional(),
+      maxCommitLength: toolSchema.schema.number().optional(),
+    },
+    async execute(args, _context) {
+      try {
+        const settingsPath = `${directory}/.opencode/auto-commit.settings.yml`
+        
+        const newSettings: Partial<AutoCommitSettings> = {
+          mode: args.mode ? ZAutoCommitMode.parse(args.mode) : "worktree",
+          maxCommitLength: args.maxCommitLength ?? 10000,
+        }
+        
+        if (args.commitModel) {
+          newSettings.commitModel = args.commitModel
+        }
+        
+        const yamlContent = yaml.stringify(newSettings)
+        await Bun.write(settingsPath, yamlContent)
+        
+        await client.app.log({
+          body: {
+            service: "opencode-autocommit",
+            level: "info",
+            message: "Initialized auto-commit settings file",
+            extra: { settingsPath, settings: newSettings },
+          },
+        })
+        
+        return JSON.stringify(newSettings, null, 2)
+      } catch (error) {
+        await client.app.log({
+          body: {
+            service: "opencode-autocommit",
+            level: "error",
+            message: "Failed to initialize settings file",
+            extra: { error: error instanceof Error ? error.message : String(error) },
+          },
+        })
+        throw new Error(`Failed to initialize: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    },
+  })
   
   return {
     event: async ({ event }) => {
@@ -489,6 +536,7 @@ ${turn.assistantResponse}`
       getAutoCommitSettings: getSettingsTool,
       setAutoCommitSettings: setSettingsTool,
       resetAutoCommitSettings: resetSettingsTool,
+      initAutoCommit: initTool,
     },
   }
 }

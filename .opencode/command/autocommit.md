@@ -4,6 +4,7 @@ description: Manage auto-commit plugin settings
 
 Use the auto-commit plugin tools:
 
+- `/initAutoCommit` to create the `.opencode/auto-commit.settings.yml` file
 - `/getAutoCommitSettings` to view current settings
 - `/setAutoCommitSettings` to update settings  
 - `/resetAutoCommitSettings` to reset to defaults
@@ -25,6 +26,8 @@ Available settings:
   - If exceeded, LLM Response section is truncated with `...` suffix
 
 Example usage:
+- `/initAutoCommit` to create settings file with defaults
+- `/initAutoCommit mode=enabled maxCommitLength=5000` to create with custom values
 - `/setAutoCommitSettings mode=enabled`
 - `/setAutoCommitSettings maxCommitLength=5000`
 - `/getAutoCommitSettings`
