@@ -3,7 +3,7 @@ I am building an opencode plugin called opencode-autocommit.  When enabled:
 
 ## General functionality
 - Every time a user enters a prompt the message ensures that there are no changes (git status shows no files).  If there are changes, it rejects the prompt and asks the user to commit all changes.
-- Every time and the AI finishes, the plugin intercepts the signal and commits all changes on the branch.
+- Every time and the AI finishes (`"session.idle"`), the plugin intercepts the signal and commits all changes on the branch.
 
 ### worktrees
 This needs to work with worktrees.  If the user is on a worktree, all changes apply to the worktree, not the main branch.
