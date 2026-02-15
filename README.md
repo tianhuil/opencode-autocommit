@@ -106,6 +106,38 @@ Then use in TUI:
 /autocommit
 ```
 
+## Building and Publishing
+
+### Building
+
+This project uses Bun runtime and TypeScript. No build step is required for local development as Bun can run TypeScript directly.
+
+```bash
+# Install dependencies
+bun install
+
+# Run the plugin (for development)
+bun run index.ts
+```
+
+### Publishing to npm
+
+1. **Update package.json**:
+   - Update the version number if needed
+
+2. **Publish**:
+   ```bash
+   bun run publish
+   ```
+
+This command builds the plugin and publishes it to npm in one step.
+
+### Install from npm
+
+```bash
+npm install opencode-autocommit
+```
+
 ## How It Works
 
 1. When `session.idle` event fires (AI finishes responding)
