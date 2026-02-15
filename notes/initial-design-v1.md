@@ -2,7 +2,7 @@
 I am building an opencode plugin called opencode-autocommit.  When enabled:
 
 ## General functionality
-- Every time a user enters a prompt the message ensures that there are no changes (git status shows no files).  If there are changes, it rejects the prompt and asks the user to commit all changes.
+- Every time a user enters a prompt the message ensures that there are no changes (git status shows no files).  If there are changes, stop the sending of this prompt and respond with an error message asking the user to commit all changes.
 - Every time and the AI finishes (`"session.idle"`), the plugin intercepts the signal and commits all changes on the branch.
 
 ### worktrees
