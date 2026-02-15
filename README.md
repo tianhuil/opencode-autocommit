@@ -123,7 +123,7 @@ bun run index.ts
 ### Publishing to npm
 
 1. **Update package.json**:
-   - Update the version number if needed
+   - Update the version number with `bun run np`
 
 2. **Publish**:
    ```bash
