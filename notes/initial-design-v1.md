@@ -46,4 +46,4 @@ If there is a `.opencode/auto-commit.config.yml` file, which contains the yml re
 There is a slash command `/autocommit` which can be used to fetch the mode or set it.  It calls the tools listed below
 
 ## Tools
-There is a tool to both get mode and set `mode`.
+There is a tool `getSettings` and `setSettings`.
